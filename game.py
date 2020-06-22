@@ -1,3 +1,5 @@
+# DEFAULTS  SETTINGS -------------------------------------------------------------------------------------------------- #
+
 import pygame, math, random, sys
 from os import path
 
@@ -5,6 +7,8 @@ images_dir = path.join(path.dirname(__file__), 'images')
 
 # pygame initialisation
 pygame.init()
+
+# SCREEN -------------------------------------------------------------------------------------------------------------- #
 
 # screen class
 class Screen():
@@ -17,6 +21,8 @@ class Screen():
 
 # window resolution
 screen = Screen(1280, 720)
+
+# PLAYER -------------------------------------------------------------------------------------------------------------- #
 
 # player sprite class
 class Player(pygame.sprite.Sprite):
@@ -32,6 +38,8 @@ class Player(pygame.sprite.Sprite):
         self.speedup = 0
         self.score = 0
 
+# METEORITE MOB ------------------------------------------------------------------------------------------------------- #
+
 # meteorite sprite class
 class Meteorite(pygame.sprite.Sprite):
     def __init__(self):
@@ -42,11 +50,11 @@ class Meteorite(pygame.sprite.Sprite):
         self.image_original.set_colorkey((0, 0, 0))
         self.image = self.image_original.copy()
         self.rect = self.image.get_rect()
-        self.radius = int(self.rect.width * .8  / 2)
+        self.radius = int(self.rect.width * 0.8  / 2)
         # pygame.draw.circle(self.image, (255, 0, 0), self.rect.center, self.radius)
         self.rect.x = math.floor(random.randrange(-4, screen.width))
         self.rect.y = math.floor(random.randrange(-10, -2))
-        self.speed_y = math.floor(random.randrange(4, 9))
+        self.speed_y = math.floor(random.randrange(4, 6))
         self.speed_x = math.floor(random.randrange(-4, 6))
         self.rot = 0
         self.rot_speed = random.randrange(-7, 7)
@@ -73,6 +81,8 @@ class Meteorite(pygame.sprite.Sprite):
             self.rect.y = math.floor(random.randrange(-4, -2))
             self.speed_y = math.floor(random.randrange(2, 7))
 
+# BULLET -------------------------------------------------------------------------------------------------------------- #
+
 # bullet sprite class
 class Bullet(pygame.sprite.Sprite):
     def __init__(self, x, y):
@@ -88,6 +98,8 @@ class Bullet(pygame.sprite.Sprite):
         self.rect.y += self.speed_y
         if self.rect.bottom < 1:
             self.kill()
+
+# PARTICLES ----------------------------------------------------------------------------------------------------------- #
 
 # particle class
 class Particle():
@@ -111,6 +123,16 @@ class Particle():
 # particle list
 particles = []
 
+def addParticlesToList(pos_x, pos_y):
+    for p in range(20):
+        particles.append(Particle(pos_x, pos_y))
+
+def showParticlesOnScreen(surf):
+    for particle in particles:
+        particle.draw(surf)
+
+# TEXT ---------------------------------------------------------------------------------------------------------------- #
+
 # showing text on screen
 def showTextOnWindow(surf, text, size, x, y):
     font = pygame.font.Font(pygame.font.match_font('verdana'), size)
@@ -120,12 +142,16 @@ def showTextOnWindow(surf, text, size, x, y):
     textArea.midtop = (x, y)
     surf.blit(textSurface, textArea)
 
+# GRAPHICS ------------------------------------------------------------------------------------------------------------ #
+
 # load all game graphics
 background = pygame.image.load(path.join(images_dir, 'space.png')).convert()
 background_rect = background.get_rect()
 
 meteorite_img = pygame.image.load(path.join(images_dir, 'meteorite.png')).convert()
 player_img = pygame.image.load(path.join(images_dir, 'rocket.png')).convert()
+
+# SPRITES GROUPS ------------------------------------------------------------------------------------------------------ #
 
 # sprite groups
 sprites = pygame.sprite.Group()
@@ -138,68 +164,73 @@ player = Player(10)
 # add sprite to group
 sprites.add(player)
 
+# METEORITE RAIN ------------------------------------------------------------------------------------------------------ #
+
 # loop for meteorite rain
 for m in range(10):
     meteor = Meteorite()
     meteor.add(mobs)
 
-# game loop
-while True:
-    # max fps
-    screen.clock.tick(60)
+# MAIN GAME FUNCTION -------------------------------------------------------------------------------------------------- #
 
-    # event handling
-    for event in pygame.event.get():
-        if event.type == pygame.QUIT:
+def main_game():
+    # game loop
+    while True:
+        # max fps
+        screen.clock.tick(60)
+
+        # event handling
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                sys.exit()
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_SPACE:
+                    bullet = Bullet(player.rect.center, player.rect.top)
+                    sprites.add(bullet)
+                    bullets.add(bullet)
+
+        # pressed keys list
+        keys = pygame.key.get_pressed()
+
+        # movement
+        if keys[pygame.K_LEFT] and player.rect.x > 0:
+            player.rect.x -= player.vel
+        if keys[pygame.K_RIGHT] and player.rect.x < screen.width - 80:
+            player.rect.x += player.vel
+
+        # painting window in black on frame
+        screen.window.fill((0, 0, 0))
+        screen.window.blit(pygame.transform.scale(background, (screen.width, screen.height)), background_rect)
+
+        # updating sprite group
+        sprites.update()
+        mobs.update()
+
+        # check if bullet hit a meteor
+        if pygame.sprite.groupcollide(bullets, mobs, True, True):
+            addParticlesToList(bullet.rect.x, bullet.rect.y)
+            bullet.kill()
+            meteor = Meteorite()
+            meteor.add(mobs)
+            player.score += 1
+
+        # drawing particles
+        showParticlesOnScreen(screen.window)
+
+        # check if meteor hit a player
+        if pygame.sprite.spritecollide(player, mobs, False, pygame.sprite.collide_circle):
             sys.exit()
-        if event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_SPACE:
-                bullet = Bullet(player.rect.center, player.rect.top)
-                sprites.add(bullet)
-                bullets.add(bullet)
 
-    # pressed keys list
-    keys = pygame.key.get_pressed()
+        # drawing sprite
+        sprites.draw(screen.window)
+        mobs.draw(screen.window)
 
-    # movement
-    if keys[pygame.K_LEFT] and player.rect.x > 0:
-        player.rect.x -= player.vel
-    if keys[pygame.K_RIGHT] and player.rect.x < screen.width - 80:
-        player.rect.x += player.vel
+        # displaying score text
+        showTextOnWindow(screen.window, 'Score: ' + str(player.score), 40, 640, 10)
 
-    # painting window in black on frame
-    screen.window.fill((0, 0, 0))
-    screen.window.blit(pygame.transform.scale(background, (screen.width, screen.height)), background_rect)
+        # updating frame
+        pygame.display.update()
 
-    # updating sprite group
-    sprites.update()
-    mobs.update()
-
-    # check if bullet hit a meteor
-    if pygame.sprite.groupcollide(bullets, mobs, True, True):
-        for p in range(20):
-            particles.append(Particle(bullet.rect.x, bullet.rect.y))
-        meteor = Meteorite()
-        meteor.add(mobs)
-        player.score += 1
-
-
-    # drawing particles
-    for particle in particles:
-        particle.draw(screen.window)
-
-    # check if meteor hit a player
-    if pygame.sprite.spritecollide(player, mobs, False, pygame.sprite.collide_circle):
-        sys.exit()
-
-    # drawing sprite
-    sprites.draw(screen.window)
-    mobs.draw(screen.window)
-
-    # displaying score text
-    showTextOnWindow(screen.window, 'Score: ' + str(player.score), 40, 640, 10)
-
-    # updating frame
-    pygame.display.update()
+main_game()
 
 pygame.quit()
