@@ -25,6 +25,8 @@ class Player(pygame.sprite.Sprite):
         self.image = pygame.transform.scale(player_img, (80, 60))
         self.image.set_colorkey((0, 0, 0))
         self.rect = self.image.get_rect()
+        self.radius = 25
+        # pygame.draw.circle(self.image, (0, 255, 0), self.rect.center, self.radius)
         self.rect.center = (screen.width // 2, 680)
         self.vel = v
         self.speedup = 0
@@ -34,17 +36,36 @@ class Player(pygame.sprite.Sprite):
 class Meteorite(pygame.sprite.Sprite):
     def __init__(self):
         pygame.sprite.Sprite.__init__(self)
-        self.sizes = [(30, 30), (40, 40), (50, 50), (60, 60)]
+        self.sizes = [[30, 30], [40, 40], [50, 50], [60, 60]]
         self.ran_size = math.floor(random.random() * len(self.sizes) - 1)
-        self.image = pygame.transform.scale(meteorite_img, (self.sizes[self.ran_size]))
-        self.image.set_colorkey((0, 0, 0))
+        self.image_original = pygame.transform.scale(meteorite_img, (self.sizes[self.ran_size]))
+        self.image_original.set_colorkey((0, 0, 0))
+        self.image = self.image_original.copy()
         self.rect = self.image.get_rect()
+        self.radius = int(self.rect.width * .8  / 2)
+        # pygame.draw.circle(self.image, (255, 0, 0), self.rect.center, self.radius)
         self.rect.x = math.floor(random.randrange(-4, screen.width))
         self.rect.y = math.floor(random.randrange(-10, -2))
-        self.speed_y = math.floor(random.randrange(2, 5))
-        self.speed_x = math.floor(random.randrange(-3, 5))
+        self.speed_y = math.floor(random.randrange(4, 9))
+        self.speed_x = math.floor(random.randrange(-4, 6))
+        self.rot = 0
+        self.rot_speed = random.randrange(-7, 7)
+        self.last_update = pygame.time.get_ticks()
+
+    # rotate function for meteors
+    def rotate(self):
+        now = pygame.time.get_ticks()
+        if now - self.last_update > 50:
+            self.last_update = now
+            self.rot += self.rot_speed % 360
+            new_image = pygame.transform.rotate(self.image_original, self.rot)
+            old_center = self.rect.center
+            self.image = new_image
+            self.rect = self.image.get_rect()
+            self.rect.center = old_center
 
     def update(self):
+        self.rotate()
         self.rect.x += self.speed_x
         self.rect.y += self.speed_y
         if self.rect.y > screen.height or self.rect.x > screen.width or self.rect.x < 0:
@@ -156,18 +177,19 @@ while True:
 
     # check if bullet hit a meteor
     if pygame.sprite.groupcollide(bullets, mobs, True, True):
-        meteor = Meteorite()
-        meteor.add(mobs)
         for p in range(20):
             particles.append(Particle(bullet.rect.x, bullet.rect.y))
+        meteor = Meteorite()
+        meteor.add(mobs)
         player.score += 1
+
 
     # drawing particles
     for particle in particles:
         particle.draw(screen.window)
 
     # check if meteor hit a player
-    if pygame.sprite.spritecollide(player, mobs, False):
+    if pygame.sprite.spritecollide(player, mobs, False, pygame.sprite.collide_circle):
         sys.exit()
 
     # drawing sprite
