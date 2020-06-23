@@ -37,6 +37,8 @@ class Player(pygame.sprite.Sprite):
         self.vel = v
         self.speedup = 0
         self.score = 0
+        self.shootDelay = 150
+        self.lastShoot = pygame.time.get_ticks()
 
 # METEORITE MOB ------------------------------------------------------------------------------------------------------- #
 
@@ -58,19 +60,15 @@ class Meteorite(pygame.sprite.Sprite):
         self.speed_x = math.floor(random.randrange(-4, 6))
         self.rot = 0
         self.rot_speed = random.randrange(-7, 7)
-        self.last_update = pygame.time.get_ticks()
 
     # rotate function for meteors
     def rotate(self):
-        now = pygame.time.get_ticks()
-        if now - self.last_update > 50:
-            self.last_update = now
-            self.rot += self.rot_speed % 360
-            new_image = pygame.transform.rotate(self.image_original, self.rot)
-            old_center = self.rect.center
-            self.image = new_image
-            self.rect = self.image.get_rect()
-            self.rect.center = old_center
+        self.rot += self.rot_speed % 360
+        new_image = pygame.transform.rotate(self.image_original, self.rot)
+        old_center = self.rect.center
+        self.image = new_image
+        self.rect = self.image.get_rect()
+        self.rect.center = old_center
 
     def update(self):
         self.rotate()
@@ -185,9 +183,14 @@ def main_game():
                 sys.exit()
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_SPACE:
-                    bullet = Bullet(player.rect.center, player.rect.top)
-                    sprites.add(bullet)
-                    bullets.add(bullet)
+                    now = pygame.time.get_ticks()
+                    print('now: ',now)
+                    print('player last shoot', player.lastShoot)
+                    if now - player.lastShoot > player.shootDelay:
+                        player.lastShoot = now
+                        bullet = Bullet(player.rect.center, player.rect.top)
+                        sprites.add(bullet)
+                        bullets.add(bullet)
 
         # pressed keys list
         keys = pygame.key.get_pressed()
@@ -207,8 +210,9 @@ def main_game():
         mobs.update()
 
         # check if bullet hit a meteor
-        if pygame.sprite.groupcollide(bullets, mobs, True, True):
-            addParticlesToList(bullet.rect.x, bullet.rect.y)
+        hits = pygame.sprite.groupcollide(bullets, mobs, True, True)
+        for hit in hits:
+            addParticlesToList(hit.rect.x, hit.rect.y)
             bullet.kill()
             meteor = Meteorite()
             meteor.add(mobs)
@@ -218,7 +222,8 @@ def main_game():
         showParticlesOnScreen(screen.window)
 
         # check if meteor hit a player
-        if pygame.sprite.spritecollide(player, mobs, False, pygame.sprite.collide_circle):
+        hits = pygame.sprite.spritecollide(player, mobs, False, pygame.sprite.collide_circle)
+        for hit in hits:
             sys.exit()
 
         # drawing sprite
