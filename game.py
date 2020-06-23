@@ -37,8 +37,6 @@ class Player(pygame.sprite.Sprite):
         self.vel = v
         self.speedup = 0
         self.score = 0
-        self.shootDelay = 150
-        self.lastShoot = pygame.time.get_ticks()
 
 # METEORITE MOB ------------------------------------------------------------------------------------------------------- #
 
@@ -184,8 +182,6 @@ def main_game():
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_SPACE:
                     now = pygame.time.get_ticks()
-                    print('now: ',now)
-                    print('player last shoot', player.lastShoot)
                     if now - player.lastShoot > player.shootDelay:
                         player.lastShoot = now
                         bullet = Bullet(player.rect.center, player.rect.top)
