@@ -1,17 +1,17 @@
 # DEFAULTS  SETTINGS -------------------------------------------------------------------------------------------------- #
 
-import pygame, math, random, sys
+import pygame, math, random, sys, time
+
 from os import path
 
 images_dir = path.join(path.dirname(__file__), 'images')
 
 # pygame initialisation
 pygame.init()
-
 # SCREEN -------------------------------------------------------------------------------------------------------------- #
 
 # screen class
-class Screen():
+class  Screen():
     def __init__(self, x, y):
         self.width = x
         self.height = y
@@ -44,7 +44,7 @@ class Player(pygame.sprite.Sprite):
 class Meteorite(pygame.sprite.Sprite):
     def __init__(self):
         pygame.sprite.Sprite.__init__(self)
-        self.sizes = [[30, 30], [40, 40], [50, 50], [60, 60]]
+        self.sizes = [[30, 30], [40, 40], [50, 50], [60, 60], [70, 70], [80, 80]]
         self.ran_size = math.floor(random.random() * len(self.sizes) - 1)
         self.image_original = pygame.transform.scale(meteorite_img, (self.sizes[self.ran_size]))
         self.image_original.set_colorkey((0, 0, 0))
@@ -56,7 +56,7 @@ class Meteorite(pygame.sprite.Sprite):
         self.rect.y = math.floor(random.randrange(-10, -2))
         self.speed_y = math.floor(random.randrange(4, 6))
         self.speed_x = math.floor(random.randrange(-4, 6))
-        self.rot = 0
+        self.rot = 1
         self.rot_speed = random.randrange(-7, 7)
 
     # rotate function for meteors
@@ -127,17 +127,6 @@ def showParticlesOnScreen(surf):
     for particle in particles:
         particle.draw(surf)
 
-# TEXT ---------------------------------------------------------------------------------------------------------------- #
-
-# showing text on screen
-def showTextOnWindow(surf, text, size, x, y):
-    font = pygame.font.Font(pygame.font.match_font('verdana'), size)
-    font.set_bold(True)
-    textSurface = font.render(text, True, (255, 255, 255))
-    textArea = textSurface.get_rect()
-    textArea.midtop = (x, y)
-    surf.blit(textSurface, textArea)
-
 # GRAPHICS ------------------------------------------------------------------------------------------------------------ #
 
 # load all game graphics
@@ -167,9 +156,34 @@ for m in range(10):
     meteor = Meteorite()
     meteor.add(mobs)
 
+# MAIN ENDING FUNCTION ------------------------------------------------------------------------------------------------ #
+
+def mainEndScene():
+    def showEndText(surf, text, size, x, y):
+        font = pygame.font.Font(pygame.font.match_font('Verdana', False), size)
+        fontArea = font.render(text, True, (255, 255, 255))
+        fontRect = fontArea.get_rect()
+        fontRect = (x, y)
+        surf.blit(fontArea, fontRect)
+
+    # main menu loop
+    while True:
+
+        screen.clock.tick(60)
+
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                sys.exit()
+
+        screen.window.fill((0, 0, 0))
+
+        showEndText(screen.window, 'You died!', 25, 590, 335)
+
+        pygame.display.update()
+
 # MAIN GAME FUNCTION -------------------------------------------------------------------------------------------------- #
 
-def main_game():
+def mainGame():
     # game loop
     while True:
         # max fps
@@ -181,12 +195,9 @@ def main_game():
                 sys.exit()
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_SPACE:
-                    now = pygame.time.get_ticks()
-                    if now - player.lastShoot > player.shootDelay:
-                        player.lastShoot = now
-                        bullet = Bullet(player.rect.center, player.rect.top)
-                        sprites.add(bullet)
-                        bullets.add(bullet)
+                    bullet = Bullet(player.rect.center, player.rect.top)
+                    sprites.add(bullet)
+                    bullets.add(bullet)
 
         # pressed keys list
         keys = pygame.key.get_pressed()
@@ -200,6 +211,15 @@ def main_game():
         # painting window in black on frame
         screen.window.fill((0, 0, 0))
         screen.window.blit(pygame.transform.scale(background, (screen.width, screen.height)), background_rect)
+
+        # showing score
+        def showScore(surf, text, size, x, y):
+            font = pygame.font.Font(pygame.font.match_font('verdana'), size)
+            font.set_bold(True)
+            textSurface = font.render(text, True, (255, 255, 255))
+            textArea = textSurface.get_rect()
+            textArea.midtop = (x, y)
+            surf.blit(textSurface, textArea)
 
         # updating sprite group
         sprites.update()
@@ -220,18 +240,52 @@ def main_game():
         # check if meteor hit a player
         hits = pygame.sprite.spritecollide(player, mobs, False, pygame.sprite.collide_circle)
         for hit in hits:
-            sys.exit()
+            mainEndScene()
 
         # drawing sprite
         sprites.draw(screen.window)
         mobs.draw(screen.window)
 
         # displaying score text
-        showTextOnWindow(screen.window, 'Score: ' + str(player.score), 40, 640, 10)
+        showScore(screen.window, 'Score: ' + str(player.score), 40, 640, 10)
 
         # updating frame
         pygame.display.update()
 
-main_game()
+# MAIN MENU FUNCTION -------------------------------------------------------------------------------------------------- #
+
+def mainMenu():
+
+    def showTitle(surf, text, size, x, y):
+        font = pygame.font.Font(pygame.font.match_font('Verdana', False), size)
+        fontArea = font.render(text, True, (255, 255, 255))
+        fontRect = fontArea.get_rect()
+        fontRect = (x, y)
+        surf.blit(fontArea, fontRect)
+
+    # main menu loop
+    while True:
+
+        screen.clock.tick(60)
+
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                sys.exit()
+
+        keys = pygame.key.get_pressed()
+
+        if keys[pygame.K_RETURN]:
+            mainGame()
+
+        screen.window.fill((0, 0, 0))
+
+        showTitle(screen.window, 'Star Wars space shooter!', 25, 500, 30)
+        showTitle(screen.window, 'Press enter to start', 15, 590, 60)
+
+        pygame.display.update()
+
+mainMenu()
+
+# CLOSE GAME ---------------------------------------------------------------------------------------------------------- #
 
 pygame.quit()
